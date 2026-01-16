@@ -1,6 +1,6 @@
 from decimal import Decimal
 from rest_framework import serializers
-from product.models import Category, Product
+from product.models import Category, Product, Review
 
 
 """ class CategorySerializer(serializers.Serializer):
@@ -36,6 +36,8 @@ class CategorySerializer(serializers.ModelSerializer):
         model = Category
         fields = "__all__"
 
+    product_count = serializers.IntegerField(read_only=True)
+
 
 class ProductSerializer(serializers.ModelSerializer):
     class Meta:
@@ -51,11 +53,11 @@ class ProductSerializer(serializers.ModelSerializer):
             "category_detail",
         ]
 
-    category = serializers.StringRelatedField()
+    category = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all())
     category_detail = serializers.HyperlinkedRelatedField(
-        queryset=Category.objects.all(),
-        view_name="specific-category",
+        view_name="category-detail",
         source="category",
+        read_only=True,
     )
     price_with_tax = serializers.SerializerMethodField(method_name="calculate_tax")
 
@@ -66,3 +68,9 @@ class ProductSerializer(serializers.ModelSerializer):
         if price < 0:
             raise serializers.ValidationError("Price could not be negative")
         return price
+
+
+class ReviewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Review
+        fields = ["id", "name", "description"]

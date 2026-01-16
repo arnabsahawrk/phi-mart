@@ -1,13 +1,23 @@
 from django.shortcuts import get_object_or_404
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from product.serializers import ProductSerializer, CategorySerializer
-from rest_framework import status
+
+# from rest_framework.decorators import api_view
+# from rest_framework.response import Response
+from product.serializers import ProductSerializer, CategorySerializer, ReviewSerializer
+
+# from rest_framework import status
 from django.db.models import Count
-from product.models import Category, Product
+from product.models import Category, Product, Review
+
+# from rest_framework.views import APIView
+# from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
+from rest_framework.viewsets import ModelViewSet
+from django_filters.rest_framework import DjangoFilterBackend
+from product.filters import ProductFilter
+from rest_framework.filters import SearchFilter, OrderingFilter
+from product.paginations import DefaultPagination
 
 
-@api_view(["GET", "POST"])
+""" @api_view(["GET", "POST"])
 def view_products(request):
     if request.method == "GET":
         products = Product.objects.select_related("category").all()
@@ -24,10 +34,41 @@ def view_products(request):
         deserializer.save()
         return Response(deserializer.data, status=status.HTTP_201_CREATED)
     else:
-        return Response({"request": "Invalid"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"request": "Invalid"}, status=status.HTTP_400_BAD_REQUEST) """
 
 
-@api_view(["GET", "PUT", "DELETE"])
+""" class ViewProducts(APIView):
+    def get(self, request):
+        products = Product.objects.select_related("category").all()
+        serializers = ProductSerializer(
+            products, many=True, context={"request": request}
+        )
+        return Response(serializers.data, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        deserializer = ProductSerializer(
+            data=request.data, context={"request": request}
+        )
+        deserializer.is_valid(raise_exception=True)
+        deserializer.save()
+        return Response(deserializer.data, status=status.HTTP_201_CREATED) """
+
+
+""" class ProductList(ListCreateAPIView):
+    queryset = Product.objects.select_related("category")
+    serializer_class = ProductSerializer
+
+    # def get_queryset(self):
+    #     return Product.objects.select_related("category").all()
+
+    # def get_serializer_class(self):
+    #     return ProductSerializer
+
+    def get_serializer_context(self):
+        return {"request": self.request} """
+
+
+""" @api_view(["GET", "PUT", "DELETE"])
 def view_specific_product(request, pk):
     if request.method == "GET":
         product = get_object_or_404(Product, pk=pk)
@@ -46,10 +87,36 @@ def view_specific_product(request, pk):
         product.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
     else:
-        return Response({"request": "Invalid"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"request": "Invalid"}, status=status.HTTP_400_BAD_REQUEST) """
 
 
-@api_view(["GET", "POST"])
+""" class ViewSpecificProduct(APIView):
+    def get(self, request, pk):
+        product = get_object_or_404(Product, pk=pk)
+        serializers = ProductSerializer(product, context={"request": request})
+        return Response(serializers.data, status=status.HTTP_200_OK)
+
+    def put(self, request, pk):
+        product = get_object_or_404(Product, pk=pk)
+        serializers = ProductSerializer(
+            product, data=request.data, context={"request": request}
+        )
+        serializers.is_valid(raise_exception=True)
+        serializers.save()
+        return Response(serializers.data, status=status.HTTP_201_CREATED)
+
+    def delete(self, request, pk):
+        product = get_object_or_404(Product, pk=pk)
+        product.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT) """
+
+
+""" class ProductDetails(RetrieveUpdateDestroyAPIView):
+    queryset = Product
+    serializer_class = ProductSerializer """
+
+
+""" @api_view(["GET", "POST"])
 def view_categories(request):
     if request.method == "GET":
         categories = Category.objects.annotate(product_count=Count("products")).all()
@@ -64,13 +131,95 @@ def view_categories(request):
         else:
             return Response(deserializer.errors, status=status.HTTP_400_BAD_REQUEST)
     else:
-        return Response({"request": "Invalid"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"request": "Invalid"}, status=status.HTTP_400_BAD_REQUEST) """
 
 
-@api_view()
+class ProductViewSet(ModelViewSet):
+    queryset = Product.objects.select_related("category").all()
+    serializer_class = ProductSerializer
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    # filterset_fields = ["category_id"]
+    filterset_class = ProductFilter
+    search_fields = ["name", "description"]
+    ordering_fields = ["price", "updated_at"]
+    pagination_class = DefaultPagination
+
+    """ def get_queryset(self):
+        queryset = self.queryset
+        request = cast(Request, self.request)
+        id = request.query_params.get("category_id")
+
+        if id:
+            return queryset.filter(category_id=id)
+        else:
+            return queryset.all() """
+
+
+""" class ViewCategories(APIView):
+    def get(self, request):
+        categories = Category.objects.annotate(product_count=Count("products")).all()
+        serializers = CategorySerializer(categories, many=True)
+        return Response(serializers.data, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        deserializer = CategorySerializer(data=request.data)
+        deserializer.is_valid(raise_exception=True)
+        deserializer.save()
+        return Response(deserializer.data, status=status.HTTP_201_CREATED) """
+
+
+""" class CategoryList(ListCreateAPIView):
+    queryset = Category.objects.annotate(product_count=Count("products"))
+    serializer_class = CategorySerializer """
+
+
+""" @api_view()
 def view_specific_category(request, pk):
     category = get_object_or_404(
         Category.objects.annotate(product_count=Count("products")), pk=pk
     )
     serializers = CategorySerializer(category)
-    return Response(serializers.data)
+    return Response(serializers.data) """
+
+
+""" class ViewSpecificCategory(APIView):
+    def get(self, request, pk):
+        category = get_object_or_404(
+            Category.objects.annotate(product_count=Count("products")), pk=pk
+        )
+
+        serializers = CategorySerializer(category)
+        return Response(serializers.data, status=status.HTTP_200_OK)
+
+    def put(self, request, pk):
+        category = get_object_or_404(Category, pk=pk)
+        serializers = CategorySerializer(category, data=request.data)
+        serializers.is_valid(raise_exception=True)
+        serializers.save()
+        return Response(serializers.data, status=status.HTTP_201_CREATED)
+
+    def delete(self, request, pk):
+        category = get_object_or_404(Category, pk=pk)
+        category.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT) """
+
+
+""" class CategoryDetails(RetrieveUpdateDestroyAPIView):
+    queryset = Category.objects.annotate(product_count=Count("products"))
+    serializer_class = CategorySerializer """
+
+
+class CategoryViewSet(ModelViewSet):
+    queryset = Category.objects.annotate(product_count=Count("products"))
+    serializer_class = CategorySerializer
+
+
+class ReviewViewSet(ModelViewSet):
+    serializer_class = ReviewSerializer
+
+    def get_queryset(self):
+        return Review.objects.filter(product_id=self.kwargs["product_pk"])
+
+    def perform_create(self, serializer):
+        product = get_object_or_404(Product, pk=self.kwargs["product_pk"])
+        serializer.save(product=product)
