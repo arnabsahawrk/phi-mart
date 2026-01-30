@@ -2,6 +2,8 @@ from django.shortcuts import get_object_or_404
 
 # from rest_framework.decorators import api_view
 # from rest_framework.response import Response
+from api.permissions import IsAdminOrReadOnly
+from product.permissions import IsReviewAuthorOrReadOnly
 from product.serializers import ProductSerializer, CategorySerializer, ReviewSerializer
 
 # from rest_framework import status
@@ -15,6 +17,8 @@ from django_filters.rest_framework import DjangoFilterBackend
 from product.filters import ProductFilter
 from rest_framework.filters import SearchFilter, OrderingFilter
 from product.paginations import DefaultPagination
+
+# from rest_framework.permissions import IsAdminUser, AllowAny, SAFE_METHODS, DjangoModelPermissions, DjangoModelPermissionsOrAnonReadOnly
 
 
 """ @api_view(["GET", "POST"])
@@ -143,6 +147,15 @@ class ProductViewSet(ModelViewSet):
     search_fields = ["name", "description"]
     ordering_fields = ["price", "updated_at"]
     pagination_class = DefaultPagination
+    # permission_classes = [IsAdminUser]
+    permission_classes = [IsAdminOrReadOnly]
+    # permission_classes = [DjangoModelPermissionsOrAnonReadOnly]
+
+    """ def get_permissions(self):
+        # if self.request.method == "GET":
+        if self.request.method in SAFE_METHODS:
+            return [AllowAny()]
+        return [IsAdminUser()] """
 
     """ def get_queryset(self):
         queryset = self.queryset
@@ -212,14 +225,21 @@ def view_specific_category(request, pk):
 class CategoryViewSet(ModelViewSet):
     queryset = Category.objects.annotate(product_count=Count("products"))
     serializer_class = CategorySerializer
+    permission_classes = [IsAdminOrReadOnly]
 
 
 class ReviewViewSet(ModelViewSet):
     serializer_class = ReviewSerializer
+    permission_classes = [IsReviewAuthorOrReadOnly]
 
     def get_queryset(self):
-        return Review.objects.filter(product_id=self.kwargs["product_pk"])
+        product = get_object_or_404(Product, pk=self.kwargs["product_pk"])
+        return Review.objects.filter(product=product)
 
     def perform_create(self, serializer):
         product = get_object_or_404(Product, pk=self.kwargs["product_pk"])
-        serializer.save(product=product)
+        serializer.save(user=self.request.user, product=product)
+
+    def perform_update(self, serializer):
+        product = get_object_or_404(Product, pk=self.kwargs["product_pk"])
+        serializer.save(user=self.request.user, product=product)

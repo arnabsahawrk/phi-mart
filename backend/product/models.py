@@ -1,4 +1,6 @@
 from django.db import models
+from django.conf import settings
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 
 class Category(models.Model):
@@ -30,13 +32,22 @@ class Product(models.Model):
 
 class Review(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
-    name = models.CharField(max_length=255)
-    description = models.TextField()
-    date = models.DateField(auto_now_add=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    ratings = models.PositiveIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(5)]
+    )
+    comment = models.TextField()
+    updated_at = models.DateField(auto_now=True)
+    created_at = models.DateField(auto_now_add=True)
+
+    def __str__(self) -> str:
+        return f"Review by {self.user.email} on {self.product.name}"
 
 
-""" Step to build an API
+"""
+Step to build an API
 # Model
 # Serializer
 # ViewSet
-# Router"""
+# Router
+"""
