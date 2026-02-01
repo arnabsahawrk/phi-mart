@@ -4,11 +4,16 @@ from django.shortcuts import get_object_or_404
 # from rest_framework.response import Response
 from api.permissions import IsAdminOrReadOnly
 from product.permissions import IsReviewAuthorOrReadOnly
-from product.serializers import ProductSerializer, CategorySerializer, ReviewSerializer
+from product.serializers import (
+    ProductImageSerializer,
+    ProductSerializer,
+    CategorySerializer,
+    ReviewSerializer,
+)
 
 # from rest_framework import status
 from django.db.models import Count
-from product.models import Category, Product, Review
+from product.models import Category, Product, ProductImage, Review
 
 # from rest_framework.views import APIView
 # from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
@@ -17,6 +22,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from product.filters import ProductFilter
 from rest_framework.filters import SearchFilter, OrderingFilter
 from product.paginations import DefaultPagination
+from drf_yasg.utils import swagger_auto_schema
 
 # from rest_framework.permissions import IsAdminUser, AllowAny, SAFE_METHODS, DjangoModelPermissions, DjangoModelPermissionsOrAnonReadOnly
 
@@ -139,6 +145,14 @@ def view_categories(request):
 
 
 class ProductViewSet(ModelViewSet):
+    """
+    API endpoint for managing products in the e-commerce store
+    - Allow authenticated admin to create, update, and delete products
+    - Allows users to browse and filter product
+    - Support searching name, description, and category
+    - Support ordering by price and updated_at
+    """
+
     queryset = Product.objects.select_related("category").all()
     serializer_class = ProductSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
@@ -150,6 +164,21 @@ class ProductViewSet(ModelViewSet):
     # permission_classes = [IsAdminUser]
     permission_classes = [IsAdminOrReadOnly]
     # permission_classes = [DjangoModelPermissionsOrAnonReadOnly]
+
+    @swagger_auto_schema(operation_summary="Retrieve a list of products")
+    def list(self, request, *args, **kwargs):
+        """Retrieve all the products"""
+        return super().list(request, *args, **kwargs)
+
+    @swagger_auto_schema(
+        operation_summary="Create a product by admin",
+        operation_description="This allow admin to create a product",
+        request_body=ProductSerializer,
+        responses={201: ProductSerializer, 400: "Bad Request"},
+    )
+    def create(self, request, *args, **kwargs):
+        """Only authenticated admin can create product"""
+        return super().create(request, *args, **kwargs)
 
     """ def get_permissions(self):
         # if self.request.method == "GET":
@@ -166,6 +195,23 @@ class ProductViewSet(ModelViewSet):
             return queryset.filter(category_id=id)
         else:
             return queryset.all() """
+
+
+class ProductImageViewSet(ModelViewSet):
+    serializer_class = ProductImageSerializer
+    permission_classes = [IsAdminOrReadOnly]
+
+    def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return ProductImage.objects.none()
+        if not self.kwargs.get("product_pk"):
+            return ProductImage.objects.none()
+        product = get_object_or_404(Product, pk=self.kwargs.get("product_pk"))
+        return ProductImage.objects.filter(product=product)
+
+    def perform_create(self, serializer):
+        product = get_object_or_404(Product, pk=self.kwargs.get("product_pk"))
+        serializer.save(product=product)
 
 
 """ class ViewCategories(APIView):
@@ -233,13 +279,17 @@ class ReviewViewSet(ModelViewSet):
     permission_classes = [IsReviewAuthorOrReadOnly]
 
     def get_queryset(self):
-        product = get_object_or_404(Product, pk=self.kwargs["product_pk"])
+        if getattr(self, "swagger_fake_view", False):
+            return Review.objects.none()
+        if not self.kwargs.get("product_pk"):
+            return Review.objects.none()
+        product = get_object_or_404(Product, pk=self.kwargs.get("product_pk"))
         return Review.objects.filter(product=product)
 
     def perform_create(self, serializer):
-        product = get_object_or_404(Product, pk=self.kwargs["product_pk"])
+        product = get_object_or_404(Product, pk=self.kwargs.get("product_pk"))
         serializer.save(user=self.request.user, product=product)
 
     def perform_update(self, serializer):
-        product = get_object_or_404(Product, pk=self.kwargs["product_pk"])
+        product = get_object_or_404(Product, pk=self.kwargs.get("product_pk"))
         serializer.save(user=self.request.user, product=product)

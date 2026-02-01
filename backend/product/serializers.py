@@ -1,6 +1,6 @@
 from decimal import Decimal
 from rest_framework import serializers
-from product.models import Category, Product, Review
+from product.models import Category, Product, ProductImage, Review
 from django.contrib.auth import get_user_model
 
 
@@ -37,10 +37,20 @@ class CategorySerializer(serializers.ModelSerializer):
         model = Category
         fields = "__all__"
 
-    product_count = serializers.IntegerField(read_only=True)
+    product_count = serializers.IntegerField(
+        read_only=True, help_text="Return the number of product in this category"
+    )
+
+
+class ProductImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductImage
+        fields = ["id", "image"]
 
 
 class ProductSerializer(serializers.ModelSerializer):
+    images = ProductImageSerializer(many=True, read_only=True)
+
     class Meta:
         model = Product
         fields = [
@@ -52,6 +62,7 @@ class ProductSerializer(serializers.ModelSerializer):
             "stock",
             "category",
             "category_detail",
+            "images",
         ]
 
     category = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all())

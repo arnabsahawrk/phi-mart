@@ -31,6 +31,10 @@ class CartViewSet(
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return Cart.objects.none()
+        if not self.request.user.is_authenticated:
+            return Cart.objects.none()
         return Cart.objects.prefetch_related("items__product").filter(
             user=self.request.user
         )
@@ -51,19 +55,26 @@ class CartItemViewSet(ModelViewSet):
         return CartItemSerializer
 
     def get_serializer_context(self):
-        return {**super().get_serializer_context(), "cart_id": self.kwargs["cart_pk"]}
+        if getattr(self, "swagger_fake_view", False):
+            return super().get_serializer_context()
+        return {
+            **super().get_serializer_context(),
+            "cart_id": self.kwargs["cart_pk"],
+        }
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False) or "cart_pk" not in self.kwargs:
+            return CartItem.objects.none()
         return CartItem.objects.select_related("product").filter(
-            cart_id=self.kwargs["cart_pk"]
+            cart_id=self.kwargs.get("cart_pk")
         )
 
     def perform_create(self, serializer):
-        cart = get_object_or_404(Cart, pk=self.kwargs["cart_pk"])
+        cart = get_object_or_404(Cart, pk=self.kwargs.get("cart_pk"))
         serializer.save(cart=cart)
 
     def perform_update(self, serializer):
-        cart = get_object_or_404(Cart, pk=self.kwargs["cart_pk"])
+        cart = get_object_or_404(Cart, pk=self.kwargs.get("cart_pk"))
         serializer.save(cart=cart)
 
 
@@ -99,9 +110,15 @@ class OrderViewSet(ModelViewSet):
         return OrderSerializer
 
     def get_serializer_context(self):
+        if getattr(self, "swagger_fake_view", False):
+            return super().get_serializer_context()
         return {"user_id": self.request.user.pk, "user": self.request.user}
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return Order.objects.none()
+        if not self.request.user.is_authenticated:
+            return Order.objects.none()
         if self.request.user.is_staff:
             return Order.objects.prefetch_related("items__product").all()
         return Order.objects.prefetch_related("items__product").filter(
