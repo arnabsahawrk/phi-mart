@@ -1,18 +1,22 @@
 from pathlib import Path
 from datetime import timedelta
+from decouple import config
+import cloudinary
+
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 SECRET_KEY = "django-insecure-=s8^0+qo5c2mc$gf@du=i6*sbp3y=2&yh+3!e(gt-*-k#c$12o"
 
-DEBUG = True
+DEBUG = config("debug") == "True"
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
 AUTH_USER_MODEL = "users.User"
 
 
 INSTALLED_APPS = [
+    "whitenoise.runserver_nostatic",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -31,6 +35,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -56,15 +61,26 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "config.wsgi.application"
+WSGI_APPLICATION = "config.wsgi.app"
 
-
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+if DEBUG:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
     }
-}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": config("dbname"),
+            "USER": config("user"),
+            "PASSWORD": config("password"),
+            "HOST": config("host"),
+            "PORT": config("port"),
+        }
+    }
 
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -90,12 +106,6 @@ TIME_ZONE = "UTC"
 USE_I18N = True
 
 USE_TZ = True
-
-
-STATIC_URL = "static/"
-MEDIA_URL = "/media/"
-
-MEDIA_ROOT = BASE_DIR / "media"
 
 
 if DEBUG:
@@ -147,3 +157,22 @@ SWAGGER_SETTINGS = {
     "DEFAULT_MODEL_RENDERING": "model",
     "SHOW_REQUEST_HEADERS": True,
 }
+
+STATIC_URL = "static/"
+MEDIA_URL = "/media/"
+
+MEDIA_ROOT = BASE_DIR / "media"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
+STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"
+
+# Configuration For Cloudinary
+cloudinary.config(
+    cloud_name=config("cloud_name"),
+    api_key=config("api_key"),
+    api_secret=config("api_secret"),
+    secure=True,
+)
+
+# Media Storage setting
+DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"

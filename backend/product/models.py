@@ -3,10 +3,11 @@ from django.conf import settings
 from django.core.validators import (
     MinValueValidator,
     MaxValueValidator,
-    FileExtensionValidator,
+    # FileExtensionValidator,
 )
 
-from product.validators import validate_file_size
+# from product.validators import validate_file_size
+from cloudinary.models import CloudinaryField
 
 
 class Category(models.Model):
@@ -39,13 +40,14 @@ class ProductImage(models.Model):
     product = models.ForeignKey(
         Product, on_delete=models.CASCADE, related_name="images"
     )
-    image = models.ImageField(
-        upload_to="product/images/",
-        validators=[
-            FileExtensionValidator(allowed_extensions=["png", "jpg", "jpeg"]),
-            validate_file_size,
-        ],
-    )
+    # image = models.ImageField(
+    #     upload_to="product/images/",
+    #     validators=[
+    #         FileExtensionValidator(allowed_extensions=["png", "jpg", "jpeg"]),
+    #         validate_file_size,
+    #     ],
+    # )
+    image = CloudinaryField("image")
 
 
 class Review(models.Model):
