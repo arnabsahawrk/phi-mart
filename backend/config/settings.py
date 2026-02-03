@@ -2,6 +2,7 @@ from pathlib import Path
 from datetime import timedelta
 from decouple import config
 import cloudinary
+import os
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -158,13 +159,9 @@ SWAGGER_SETTINGS = {
     "SHOW_REQUEST_HEADERS": True,
 }
 
-STATIC_URL = "static/"
+
 MEDIA_URL = "/media/"
-
-MEDIA_ROOT = BASE_DIR / "media"
-STATIC_ROOT = BASE_DIR / "staticfiles"
-
-STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
 # Configuration For Cloudinary
 cloudinary.config(
@@ -176,3 +173,13 @@ cloudinary.config(
 
 # Media Storage setting
 DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
+
+STATIC_URL = "/static/"
+STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
+STATICFILES_DIRS = []
+
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+WHITENOISE_USE_FINDERS = True
+WHITENOISE_AUTOREFRESH = True if DEBUG else False
+WHITENOISE_MANIFEST_STRICT = False

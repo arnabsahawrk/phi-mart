@@ -77,11 +77,9 @@ db.sqlite3-journal
 db.sqlite3-wal
 db.sqlite3-shm
 media/
-staticfiles/
 
 # Secrets / environment
 .env
 .env.*
 .envrc
 .python-version
-token.json
